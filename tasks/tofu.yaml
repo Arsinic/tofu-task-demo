@@ -1,0 +1,68 @@
+# yaml-language-server: $schema=https://github.com/defenseunicorns/maru-runner/blob/main/tasks.schema.json
+variables: 
+  - name: TOFU_ROOT_DIR
+    description: "base directory path for local tofu '*.tf' files"
+
+tasks:
+  - name: test-init
+    description: "init a tofu configuration"
+    variables: 
+      - name: TOFU_ROOT_DIR
+        required: true
+      - name: ENVIRONMENT_NAME
+        required: true
+    actions:
+      - cmd: |
+          set -exo pipefail
+
+          # Retry mechanism for tofu init
+          retries=5
+          for i in $(seq 1 $retries); do
+              echo "Attempt $i of $retries"
+              tofu -chdir=${TOFU_ROOT_DIR} init  \
+              -backend-config="$./configs/${ENVIRONMENT_NAME}-backend.tf" \
+              -input=false -no-color \
+              -reconfigure && break || echo "Retry $i failed, trying again..."
+              sleep 2  # wait before retrying
+          done
+        shell:
+          linux: bash
+          darwin: bash
+
+  - name: test-validate
+    description: "validate a tofu configuration"
+    actions:
+      - cmd: tofu validate
+
+  - name: test-plan
+    description:
+    variables:
+      - name: TOFU_ROOT_DIR
+        required: true
+      - name: ENVIRONMENT_NAME
+        required: true
+      - name: TOFU_PLAN_OUTPUT_FILE
+        default: "${ENVIRONMENT_NAME}-tfplan" 
+    actions:
+      - cmd: echo "Tofu planning for $ENVIRONMENT_NAME environment"
+      - cmd: |
+          tofu -chdir=${TOFU_ROOT_DIR} plan \
+          -refresh=false -var-file="./configs/${ENVIRONMENT_NAME}.tfvars" \
+          -out=${TOFU_PLAN_OUTPUT_FILE}
+
+
+  - name: test-apply
+    description:
+    variables:
+      - name: TOFU_ROOT_DIR
+        required: true
+      - name: ENVIRONMENT_NAME
+        required: true
+      - name: TOFU_PLAN_OUTPUT_FILE
+        required: true
+    actions:
+      - cmd: echo "Tofu applying resources in $ENVIRONMENT_NAME environment"
+      - cmd: |
+          tofu -chdir=${TOFU_ROOT_DIR} apply $TOFU_PLAN_OUTPUT_FILE \
+          --auto-approve
+

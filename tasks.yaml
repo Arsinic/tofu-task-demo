@@ -1,0 +1,69 @@
+# yaml-language-server: $schema=https://github.com/defenseunicorns/maru-runner/blob/main/tasks.schema.json
+includes:
+  - tofu: ./tasks/tofu.yaml
+
+variables: 
+  - name: TOFU_ROOT_DIR
+    description: "base directory path for local tofu '*.tf' files"
+    default: "./tofu"
+  # - name: ENVIRONMENT_NAME
+  #   description: targeted environment for tofu resources
+  #   default: "dev" 
+
+tasks:
+  - name: test-tofu-tasks
+    description: test tofu tasks with our creating anything. Helpful for local testing
+    variables:
+      - name: ENVIRONMENT_NAME
+        description: targeted environment for tofu resources
+        required: true
+    actions:
+      - task: tofu:test-init
+      - task: tofu:test-validate
+      - task: tofu:test-plan
+      - task: tofu:test-apply
+
+  - name: test-dev-tofu-tasks
+    description: test tofu tasks with out creating anything. Helpful for local testing
+    actions:
+      - cmd: MARU_ENVIRONMENT_NAME="dev"
+        description: setting the vlaue of the env var $ENVIRONMENT_NAME 
+      - task: test-tofu-tasks
+
+  - name: test-dev-B
+    variables:
+      - name: ENVIRONMENT_NAME
+        description: Name of the environment to do tofu things against
+        required: true
+    actions:
+      - task: test-tofu-tasks
+
+  - name: test-prod-tofu-tasks-A
+    variables:
+      - name: ENVIRONMENT_NAME  
+        required: true
+    description: test tofu tasks - via jank
+    actions:
+      - description: jank set ENVIRONMENT_NAME to "prod"  
+        cmd: |
+          ENVIRONMENT_NAME="prod"
+          echo $ENVIRONMENT_NAME
+        setVariables:
+          - name: ENVIRONMENT_NAME
+      - task: test-tofu-tasks
+
+  - name: test-prod-tofu-tasks-B
+    variables:
+      - name: ENVIRONMENT_NAME  
+        description: must use --set flag when running task
+        required: true
+    description: test tofu tasks - set ENVIRONMENT_NAME via --set flag
+    actions:
+      - task: test-tofu-tasks
+
+  - name: test-prod-tofu-tasks-C
+    description: test tofu tasks - use envPath to set ENVIRONMENT_NAME to "prod"  
+    envPath: ./envs/prod.env
+    actions:
+      - description: 
+      - task: test-tofu-tasks
