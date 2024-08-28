@@ -20,7 +20,7 @@ tasks:
           for i in $(seq 1 $retries); do
               echo "Attempt $i of $retries"
               tofu -chdir=${TOFU_ROOT_DIR} init  \
-              -backend-config="$./configs/${ENVIRONMENT_NAME}-backend.tf" \
+              -backend-config="$./backends/${ENVIRONMENT_NAME}-backend.tf" \
               -input=false -no-color \
               -reconfigure && break || echo "Retry $i failed, trying again..."
               sleep 2  # wait before retrying
@@ -47,7 +47,7 @@ tasks:
       - cmd: echo "Tofu planning for $ENVIRONMENT_NAME environment"
       - cmd: |
           tofu -chdir=${TOFU_ROOT_DIR} plan \
-          -refresh=false -var-file="./configs/${ENVIRONMENT_NAME}.tfvars" \
+          -refresh=false -var-file="./vars/${ENVIRONMENT_NAME}.tfvars" \
           -out=${TOFU_PLAN_OUTPUT_FILE}
 
 
